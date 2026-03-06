@@ -9,8 +9,8 @@ const WB_Receiver = {
 
             const response = await fetch(`https://whateverbox.onrender.com/api/v1/${endpoint}`, options);
             
-            if (!response.ok && attempt <= 5) {
-                throw new Error("Server warming up...");
+            if (!response.ok && response.status !== 404 && attempt <= 5) {
+                throw new Error("Retryable error");
             }
             
             return await response.json();
