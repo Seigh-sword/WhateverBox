@@ -14,9 +14,25 @@ const WhateverBox = {
             mode: mode,
             target: target
         });
-        const response = await fetch(`http://localhost:8080/api/v1/get?${params}`);
-        if (mode === 'file') return response.blob();
-        return response.json();
+        
+        const url = `https://whateverbox.onrender.com/api/v1/get?${params}`;
+        
+        if (mode === 'file') {
+            let attempt = 1;
+            while (attempt <= 5) {
+                try {
+                    const response = await fetch(url);
+                    if (response.ok) return await response.blob();
+                    throw new Error();
+                } catch (e) {
+                    if (attempt === 5) throw e;
+                    await new Promise(r => setTimeout(r, attempt * 2000));
+                    attempt++;
+                }
+            }
+        }
+        
+        return WB_Receiver.sendToEngine(`get?${params}`, null, false);
     },
 
     async put(name, value, mode = 'gv') {
@@ -32,10 +48,6 @@ const WhateverBox = {
             data.append("file", value);
         }
         
-        const response = await fetch(`http://localhost:8080/api/v1/put`, {
-            method: 'POST',
-            body: data
-        });
-        return response.json();
+        return WB_Receiver.sendToEngine('put', data);
     }
 };
