@@ -44,11 +44,20 @@ async def handle_put():
         if mode == 'gv':
             v_name = request.form.get("name")
             v_val = request.form.get("value")
+            
+            async for msg in client.iter_messages(Keys.BOX_ID, search=f"project: {p_name}"):
+                if f"token: {p_token}" in msg.message and f"{v_name}:" in msg.message:
+                    await msg.delete()
+            
             caption = Formatter.global_var_style(p_name, p_token, v_name, v_val)
             await client.send_message(Keys.BOX_ID, caption)
         
         elif mode == 'file':
             file = request.files.get("file")
+            async for msg in client.iter_messages(Keys.BOX_ID, search=f"project: {p_name}"):
+                if f"token: {p_token}" in msg.message and f"file: {file.filename.rsplit('.', 1)[0]}" in msg.message:
+                    await msg.delete()
+
             caption = Formatter.file_style(p_name, p_token, file.filename)
             await client.send_file(Keys.BOX_ID, file, caption=caption)
 
