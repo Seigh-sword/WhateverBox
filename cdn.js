@@ -1,10 +1,35 @@
+const WB_Receiver = {
+    async sendToEngine(endpoint, formData, isJson = false, attempt = 1) {
+        try {
+            const options = {
+                method: isJson ? 'DELETE' : 'POST',
+                body: isJson ? JSON.stringify(formData) : formData
+            };
+            if (isJson) options.headers = { 'Content-Type': 'application/json' };
+
+            const response = await fetch(`https://whateverbox.onrender.com/api/v1/${endpoint}`, options);
+            if (!response.ok && response.status !== 404 && attempt <= 5) {
+                throw new Error("Retryable error");
+            }
+            return await response.json();
+        } catch (err) {
+            if (attempt <= 5) {
+                let delay = attempt * 2000;
+                await new Promise(r => setTimeout(r, delay));
+                return this.sendToEngine(endpoint, formData, isJson, attempt + 1);
+            }
+            throw err;
+        }
+    }
+};
+
 const WhateverBox = {
     project: "",
     token: "",
 
-    init(projectName, userToken) {
-        this.project = projectName;
-        this.token = userToken;
+    init(p, t) {
+        this.project = p;
+        this.token = t;
     },
 
     async get(target, mode = 'gv') {
@@ -14,24 +39,12 @@ const WhateverBox = {
             mode: mode,
             target: target
         });
-        
-        const url = `https://whateverbox.onrender.com/api/v1/get?${params}`;
-        
+
         if (mode === 'file') {
-            let attempt = 1;
-            while (attempt <= 5) {
-                try {
-                    const response = await fetch(url);
-                    if (response.ok) return await response.blob();
-                    throw new Error();
-                } catch (e) {
-                    if (attempt === 5) throw e;
-                    await new Promise(r => setTimeout(r, attempt * 2000));
-                    attempt++;
-                }
-            }
+            const response = await fetch(`https://whateverbox.onrender.com/api/v1/get?${params}`);
+            return await response.blob();
         }
-        
+
         return WB_Receiver.sendToEngine(`get?${params}`, null, false);
     },
 
